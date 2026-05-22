@@ -160,13 +160,13 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-between bg-white text-black px-2 py-4 select-none">
-      <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
+    <main className="min-h-screen flex flex-col items-center justify-between bg-white text-black px-3 py-6 sm:px-6 sm:py-10 select-none">
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5">
         {Array.from({ length: ROWS }).map((_, i) => {
           const g = guesses[i];
           const isCurrent = i === guesses.length && !gameOver;
           return (
-            <div key={i} className="flex gap-1.5">
+            <div key={i} className="flex gap-2 sm:gap-2.5">
               {Array.from({ length: COLS }).map((_, j) => {
                 let letter = "";
                 let cls = "border-neutral-300 bg-white text-black";
@@ -184,7 +184,7 @@ export default function Home() {
                 return (
                   <div
                     key={j}
-                    className={`w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center text-2xl font-bold uppercase border-2 ${cls}`}
+                    className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-light uppercase border ${cls}`}
                   >
                     {letter}
                   </div>
@@ -195,14 +195,14 @@ export default function Home() {
         })}
       </div>
 
-      <div className="h-6 text-sm uppercase tracking-wider">
+      <div className="h-8 text-sm sm:text-base uppercase tracking-widest font-light">
         {won && "solved"}
         {lost && answer && answer.toLowerCase()}
       </div>
 
-      <div className="flex flex-col gap-1.5 w-full max-w-md mt-2">
+      <div className="flex flex-col gap-1.5 sm:gap-2 w-full max-w-md sm:max-w-xl md:max-w-2xl mt-2">
         {KEYBOARD.map((row, i) => (
-          <div key={i} className="flex gap-1 justify-center">
+          <div key={i} className="flex gap-1 sm:gap-1.5 justify-center">
             {row.map((k) => {
               const wide = k === "ENTER" || k === "BACK";
               const s = letterStatus[k];
@@ -217,8 +217,10 @@ export default function Home() {
                   key={k}
                   type="button"
                   onClick={() => onKey(k)}
-                  className={`h-12 flex items-center justify-center font-bold uppercase rounded border-2 ${
-                    wide ? "px-3 text-xs" : "flex-1 text-sm"
+                  className={`h-14 sm:h-16 md:h-20 flex items-center justify-center font-normal uppercase rounded border ${
+                    wide
+                      ? "px-3 sm:px-5 text-xs sm:text-sm md:text-base"
+                      : "flex-1 text-base sm:text-xl md:text-2xl"
                   } ${cls}`}
                 >
                   {k === "BACK" ? "⌫" : k}
