@@ -7,6 +7,7 @@ const COLS = 5;
 
 type Status = "correct" | "present" | "absent";
 type Guess = { letters: string; statuses: Status[] };
+type Theme = "light" | "dark";
 
 function todayKey(): string {
   const d = new Date();
@@ -52,6 +53,7 @@ export default function Home() {
   const [answer, setAnswer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [theme, setTheme] = useState<Theme>("light");
 
   const gameOver = won || lost;
 
@@ -63,11 +65,12 @@ export default function Home() {
         if (Array.isArray(s.guesses)) setGuesses(s.guesses);
         if (s.won) setWon(true);
         if (s.lost) setLost(true);
-        if (typeof s.answer === "string") setAnswer(s.answer);
       } catch {
         // ignore corrupted save
       }
     }
+    const t = localStorage.getItem("dp:theme");
+    if (t === "dark" || t === "light") setTheme(t);
     setHydrated(true);
   }, [date]);
 
@@ -76,9 +79,16 @@ export default function Home() {
     if (guesses.length === 0 && !won && !lost) return;
     localStorage.setItem(
       `dp:${date}`,
-      JSON.stringify({ guesses, won, lost, answer }),
+      JSON.stringify({ guesses, won, lost }),
     );
-  }, [hydrated, guesses, won, lost, answer, date]);
+  }, [hydrated, guesses, won, lost, date]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (theme === "dark") document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+    localStorage.setItem("dp:theme", theme);
+  }, [hydrated, theme]);
 
   const submit = useCallback(async () => {
     if (busy || gameOver) return;
@@ -134,6 +144,13 @@ export default function Home() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      // skip when a button has focus so on-screen keys don't double-fire
+      if (
+        typeof document !== "undefined" &&
+        document.activeElement instanceof HTMLButtonElement
+      ) {
+        return;
+      }
       if (e.key === "Enter") {
         e.preventDefault();
         onKey("ENTER");
@@ -148,6 +165,17 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handler);
   }, [onKey]);
 
+  const restart = () => {
+    setGuesses([]);
+    setCurrent("");
+    setWon(false);
+    setLost(false);
+    setAnswer(null);
+    localStorage.removeItem(`dp:${date}`);
+  };
+
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
   const letterStatus: Record<string, Status> = {};
   const rank: Record<Status, number> = { absent: 0, present: 1, correct: 2 };
   for (const g of guesses) {
@@ -160,7 +188,29 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-between bg-white text-black px-3 py-6 sm:px-6 sm:py-10 select-none">
+    <main className="min-h-screen flex flex-col items-center justify-between bg-white dark:bg-black text-black dark:text-white px-3 py-6 sm:px-6 sm:py-8 select-none transition-colors duration-300">
+      <div className="w-full max-w-2xl flex items-center justify-between">
+        <button
+          type="button"
+          onClick={restart}
+          title="Restart"
+          aria-label="Restart"
+          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-300"
+        >
+          ↻
+        </button>
+
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title="Toggle theme"
+          aria-label="Toggle theme"
+          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-300"
+        >
+          {theme === "dark" ? "☀" : "☾"}
+        </button>
+      </div>
+
       <div className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5">
         {Array.from({ length: ROWS }).map((_, i) => {
           const g = guesses[i];
@@ -169,22 +219,27 @@ export default function Home() {
             <div key={i} className="flex gap-2 sm:gap-2.5">
               {Array.from({ length: COLS }).map((_, j) => {
                 let letter = "";
-                let cls = "border-neutral-300 bg-white text-black";
+                let cls =
+                  "border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black text-black dark:text-white";
                 if (g) {
                   letter = g.letters[j];
                   if (g.statuses[j] === "correct")
-                    cls = "border-black bg-black text-white";
+                    cls =
+                      "border border-black dark:border-white bg-black dark:bg-white text-white dark:text-black";
                   else if (g.statuses[j] === "present")
-                    cls = "border-neutral-500 bg-neutral-500 text-white";
-                  else cls = "border-neutral-300 bg-neutral-200 text-neutral-500";
+                    cls = "border border-neutral-500 bg-neutral-500 text-white";
+                  else
+                    cls =
+                      "border border-neutral-300 dark:border-neutral-700 bg-neutral-200 dark:bg-neutral-800 text-neutral-500";
                 } else if (isCurrent && j < current.length) {
                   letter = current[j];
-                  cls = "border-black bg-white text-black";
+                  cls =
+                    "border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white";
                 }
                 return (
                   <div
                     key={j}
-                    className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-light uppercase border ${cls}`}
+                    className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-light uppercase transition-colors duration-300 ${cls}`}
                   >
                     {letter}
                   </div>
@@ -195,7 +250,7 @@ export default function Home() {
         })}
       </div>
 
-      <div className="h-8 text-sm sm:text-base uppercase tracking-widest font-light">
+      <div className="h-6 text-sm sm:text-base uppercase tracking-widest font-light">
         {won && "solved"}
         {lost && answer && answer.toLowerCase()}
       </div>
@@ -206,18 +261,22 @@ export default function Home() {
             {row.map((k) => {
               const wide = k === "ENTER" || k === "BACK";
               const s = letterStatus[k];
-              let cls = "border-neutral-300 bg-white text-black";
-              if (s === "correct") cls = "border-black bg-black text-white";
+              let cls =
+                "border-2 border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black text-black dark:text-white";
+              if (s === "correct")
+                cls =
+                  "border border-black dark:border-white bg-black dark:bg-white text-white dark:text-black";
               else if (s === "present")
-                cls = "border-neutral-500 bg-neutral-500 text-white";
+                cls = "border border-neutral-500 bg-neutral-500 text-white";
               else if (s === "absent")
-                cls = "border-neutral-300 bg-neutral-200 text-neutral-500";
+                cls =
+                  "border border-neutral-300 dark:border-neutral-700 bg-neutral-200 dark:bg-neutral-800 text-neutral-500";
               return (
                 <button
                   key={k}
                   type="button"
                   onClick={() => onKey(k)}
-                  className={`h-14 sm:h-16 md:h-20 flex items-center justify-center font-normal uppercase rounded border ${
+                  className={`h-14 sm:h-16 md:h-20 flex items-center justify-center font-normal uppercase rounded transition-colors duration-300 ${
                     wide
                       ? "px-3 sm:px-5 text-xs sm:text-sm md:text-base"
                       : "flex-1 text-base sm:text-xl md:text-2xl"
