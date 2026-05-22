@@ -16,6 +16,27 @@ function todayKey(): string {
   return `${y}-${m}-${day}`;
 }
 
+function playDing(): void {
+  try {
+    const Ctx = window.AudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+    osc.onended = () => ctx.close();
+  } catch {
+    // audio unsupported or blocked — silent fail
+  }
+}
+
 const KEYBOARD: string[][] = [
   ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
@@ -84,6 +105,7 @@ export default function Home() {
       setCurrent("");
       if (data.win) {
         setWon(true);
+        playDing();
       } else if (next.length >= ROWS) {
         setLost(true);
         if (data.answer) setAnswer(data.answer);
