@@ -1,65 +1,211 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+const ROWS = 6;
+const COLS = 5;
+
+type Status = "correct" | "present" | "absent";
+type Guess = { letters: string; statuses: Status[] };
+
+function todayKey(): string {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+const KEYBOARD: string[][] = [
+  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+  ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+  ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "BACK"],
+];
 
 export default function Home() {
+  const [date] = useState<string>(todayKey);
+  const [guesses, setGuesses] = useState<Guess[]>([]);
+  const [current, setCurrent] = useState<string>("");
+  const [won, setWon] = useState(false);
+  const [lost, setLost] = useState(false);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  const gameOver = won || lost;
+
+  useEffect(() => {
+    const raw = localStorage.getItem(`dp:${date}`);
+    if (raw) {
+      try {
+        const s = JSON.parse(raw);
+        if (Array.isArray(s.guesses)) setGuesses(s.guesses);
+        if (s.won) setWon(true);
+        if (s.lost) setLost(true);
+        if (typeof s.answer === "string") setAnswer(s.answer);
+      } catch {
+        // ignore corrupted save
+      }
+    }
+    setHydrated(true);
+  }, [date]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (guesses.length === 0 && !won && !lost) return;
+    localStorage.setItem(
+      `dp:${date}`,
+      JSON.stringify({ guesses, won, lost, answer }),
+    );
+  }, [hydrated, guesses, won, lost, answer, date]);
+
+  const submit = useCallback(async () => {
+    if (busy || gameOver) return;
+    if (current.length !== COLS) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/guess", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          guess: current,
+          date,
+          guessNumber: guesses.length + 1,
+        }),
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        statuses: Status[];
+        win: boolean;
+        answer?: string;
+      };
+      const next = [...guesses, { letters: current, statuses: data.statuses }];
+      setGuesses(next);
+      setCurrent("");
+      if (data.win) {
+        setWon(true);
+      } else if (next.length >= ROWS) {
+        setLost(true);
+        if (data.answer) setAnswer(data.answer);
+      }
+    } catch {
+      // network errors silently dropped — user can retry
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, gameOver, current, date, guesses]);
+
+  const onKey = useCallback(
+    (k: string) => {
+      if (gameOver || busy) return;
+      if (k === "ENTER") {
+        submit();
+      } else if (k === "BACK") {
+        setCurrent((c) => c.slice(0, -1));
+      } else if (/^[A-Z]$/.test(k)) {
+        setCurrent((c) => (c.length < COLS ? c + k : c));
+      }
+    },
+    [gameOver, busy, submit],
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onKey("ENTER");
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        onKey("BACK");
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        onKey(e.key.toUpperCase());
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onKey]);
+
+  const letterStatus: Record<string, Status> = {};
+  const rank: Record<Status, number> = { absent: 0, present: 1, correct: 2 };
+  for (const g of guesses) {
+    for (let i = 0; i < COLS; i++) {
+      const l = g.letters[i];
+      const s = g.statuses[i];
+      const prev = letterStatus[l];
+      if (!prev || rank[s] > rank[prev]) letterStatus[l] = s;
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="min-h-screen flex flex-col items-center justify-between bg-white text-black px-2 py-4 select-none">
+      <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
+        {Array.from({ length: ROWS }).map((_, i) => {
+          const g = guesses[i];
+          const isCurrent = i === guesses.length && !gameOver;
+          return (
+            <div key={i} className="flex gap-1.5">
+              {Array.from({ length: COLS }).map((_, j) => {
+                let letter = "";
+                let cls = "border-neutral-300 bg-white text-black";
+                if (g) {
+                  letter = g.letters[j];
+                  if (g.statuses[j] === "correct")
+                    cls = "border-black bg-black text-white";
+                  else if (g.statuses[j] === "present")
+                    cls = "border-neutral-500 bg-neutral-500 text-white";
+                  else cls = "border-neutral-300 bg-neutral-200 text-neutral-500";
+                } else if (isCurrent && j < current.length) {
+                  letter = current[j];
+                  cls = "border-black bg-white text-black";
+                }
+                return (
+                  <div
+                    key={j}
+                    className={`w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center text-2xl font-bold uppercase border-2 ${cls}`}
+                  >
+                    {letter}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="h-6 text-sm uppercase tracking-wider">
+        {won && "solved"}
+        {lost && answer && answer.toLowerCase()}
+      </div>
+
+      <div className="flex flex-col gap-1.5 w-full max-w-md mt-2">
+        {KEYBOARD.map((row, i) => (
+          <div key={i} className="flex gap-1 justify-center">
+            {row.map((k) => {
+              const wide = k === "ENTER" || k === "BACK";
+              const s = letterStatus[k];
+              let cls = "border-neutral-300 bg-white text-black";
+              if (s === "correct") cls = "border-black bg-black text-white";
+              else if (s === "present")
+                cls = "border-neutral-500 bg-neutral-500 text-white";
+              else if (s === "absent")
+                cls = "border-neutral-300 bg-neutral-200 text-neutral-500";
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => onKey(k)}
+                  className={`h-12 flex items-center justify-center font-bold uppercase rounded border-2 ${
+                    wide ? "px-3 text-xs" : "flex-1 text-sm"
+                  } ${cls}`}
+                >
+                  {k === "BACK" ? "⌫" : k}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </main>
   );
 }
