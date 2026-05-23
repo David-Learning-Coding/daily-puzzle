@@ -220,21 +220,21 @@ export default function Home() {
               {Array.from({ length: COLS }).map((_, j) => {
                 let letter = "";
                 let cls =
-                  "border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black text-black dark:text-white";
+                  "border-[1.5px] border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black text-black dark:text-white";
                 if (g) {
                   letter = g.letters[j];
                   if (g.statuses[j] === "correct")
                     cls =
-                      "border border-black dark:border-white bg-black dark:bg-white text-white dark:text-black";
+                      "border-[1.5px] border-black dark:border-white bg-black dark:bg-white text-white dark:text-black";
                   else if (g.statuses[j] === "present")
-                    cls = "border border-neutral-500 bg-neutral-500 text-white";
+                    cls = "border-[1.5px] border-neutral-500 bg-neutral-500 text-white";
                   else
                     cls =
-                      "border border-neutral-300 dark:border-neutral-700 bg-neutral-200 dark:bg-neutral-800 text-neutral-500";
+                      "border-[1.5px] border-neutral-300 dark:border-neutral-700 bg-neutral-200 dark:bg-neutral-800 text-neutral-500";
                 } else if (isCurrent && j < current.length) {
                   letter = current[j];
                   cls =
-                    "border-2 border-black dark:border-white bg-white dark:bg-black text-black dark:text-white";
+                    "border-[3px] border-black dark:border-white bg-white dark:bg-black text-black dark:text-white";
                 }
                 return (
                   <div
