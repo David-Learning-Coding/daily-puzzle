@@ -188,14 +188,14 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-between bg-white dark:bg-black text-black dark:text-white px-3 py-6 sm:px-6 sm:py-8 select-none transition-colors duration-300">
+    <main className="min-h-screen flex flex-col items-center justify-between bg-white dark:bg-black text-black dark:text-white px-3 py-6 sm:px-6 sm:py-8 select-none transition-colors duration-[375ms] dark:duration-300">
       <div className="w-full max-w-2xl flex items-center justify-between">
         <button
           type="button"
           onClick={restart}
           title="Restart"
           aria-label="Restart"
-          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-300"
+          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-[375ms] dark:duration-300"
         >
           ↻
         </button>
@@ -205,7 +205,7 @@ export default function Home() {
           onClick={toggleTheme}
           title="Toggle theme"
           aria-label="Toggle theme"
-          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-300"
+          className="w-10 h-10 flex items-center justify-center text-2xl font-light transition-colors duration-[375ms] dark:duration-300"
         >
           {theme === "dark" ? "☀" : "☾"}
         </button>
@@ -239,7 +239,7 @@ export default function Home() {
                 return (
                   <div
                     key={j}
-                    className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-light uppercase transition-colors duration-300 ${cls}`}
+                    className={`w-14 h-14 sm:w-20 sm:h-20 md:w-24 md:h-24 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl font-light uppercase transition-colors duration-[375ms] dark:duration-300 ${cls}`}
                   >
                     {letter}
                   </div>
@@ -276,7 +276,7 @@ export default function Home() {
                   key={k}
                   type="button"
                   onClick={() => onKey(k)}
-                  className={`h-14 sm:h-16 md:h-20 flex items-center justify-center font-normal uppercase rounded transition-colors duration-300 ${
+                  className={`h-14 sm:h-16 md:h-20 flex items-center justify-center font-normal uppercase rounded transition-colors duration-[375ms] dark:duration-300 ${
                     wide
                       ? "px-3 sm:px-5 text-xs sm:text-sm md:text-base"
                       : "flex-1 text-base sm:text-xl md:text-2xl"
